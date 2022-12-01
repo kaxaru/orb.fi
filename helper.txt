@@ -1,0 +1,14 @@
+Текущие доступные сети в config в переменной get_provider:
+1) Ethereum
+2) BSC
+3) Arbitrum
+4) Optimism
+5) Matic
+
+Настроить стоимость газа можно в default_gasPrice для каждой из сетей, либо добавить.
+Весь список сетей на сайте орбитера - https://docs.orbiter.finance/technology. Доступные кода в таблице.
+
+Переменные **_orbiter - роутеры орбитра, куда отправляются токены.
+contract_stable - контракты токенов из доступных сетей, которые можно найти на coingecko/coinmarket
+sourthmap_currency - возможность отправки текущего токена в нужную сеть и его withholding_fee. Fee устанавливается для каждой сети статично.
+

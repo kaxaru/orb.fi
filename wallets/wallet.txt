@@ -1,0 +1,6 @@
+keys here
+Format:
+1) privateKey
+2) seed (100 wallets)
+3) seed; num(1-num wallets)
+4) seed;;num, num2-num3(num - account number, etc)
