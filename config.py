@@ -11,8 +11,8 @@ eth_orbiter = '0x80C67432656d59144cEFf962E8fAF8926599bCF8'
 dai_orbiter = '0x095D2918B03b2e86D68551DCF11302121fb626c9'
 
 contract_stable = {
-    'eth': {
-        'usdc': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    'ethereum': {
+        'usdc' : '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
         'usdt': '0xdAC17F958D2ee523a2206206994597C13D831ec7',
         'dai': ''
     },
@@ -199,7 +199,7 @@ default_gasPrice = {
         'gasLimit': 120000
     },
     'ethereum': {
-        'gasPrice':  Web3.toWei(0.0000000001, 'ether'),
+        'gasPrice':  Web3.toWei(20, 'gwei'),
         'gasLimit': 3000000
     },
     'bsc': {
@@ -227,7 +227,49 @@ transfer_limit = {
                             'min': 0.01,
                             'max': 3000
             },
-        }
+        },
+        'optimism': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10
+                    },
+                    'usdc': {
+                                    'min': 0.005,
+                                    'max': 10000
+                                },
+                    'usdt': {
+                                    'min': 0.005,
+                                    'max': 10000
+                                },
+                    'dai': {
+                                    'min': 0.01,
+                                    'max': 3000
+                    },
+        },
+        'matic': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10
+                    },
+                    'usdc': {
+                                    'min': 0.005,
+                                    'max': 10000
+                                },
+                    'usdt': {
+                                    'min': 0.005,
+                                    'max': 10000
+                                },
+                    'dai': {
+                                    'min': 0.01,
+                                    'max': 3000
+                    },
+        },
+        'bsc': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10
+                    },
+                },
     },
     'arbitrum': {
             'matic': {
