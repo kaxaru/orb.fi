@@ -17,9 +17,8 @@ def get_all_wallets(list):
             continue
         if len(wallet) == 64:
             cWallet = web3.eth.account.from_key(wallet)
-            balance = web3.eth.get_balance(cWallet.address)
-            nonce = web3.eth.get_transaction_count(cWallet.address)
-            _wallets.append({'wallet': cWallet, 'balance': balance, 'nonce': nonce})
+
+            _wallets.append({'wallet': cWallet})
         else:
             wallet_format = wallet.split(';')
             if len(wallet_format) == 2:
@@ -46,9 +45,8 @@ def get_all_wallets(list):
                 _all_wallets = []
                 for i in range(int(num_of_wallet)):
                     wallet_address = web3.eth.account.from_mnemonic(cWallet, account_path=f"m/44'/60'/0'/0/{i}")
-                    balance = web3.eth.get_balance(wallet_address.address)
-                    nonce = web3.eth.get_transaction_count(wallet_address.address)
-                    _all_wallets.append({'wallet': wallet_address, 'balance': balance, 'nonce': nonce})
+
+                    _all_wallets.append({'wallet': wallet_address})
                 _new_wallets = []
                 for el in indexes:
                     _new_wallets.append(_all_wallets[el - 1])
@@ -56,8 +54,7 @@ def get_all_wallets(list):
             else:
                 for i in range(int(num_of_wallet)):
                     wallet_address = web3.eth.account.from_mnemonic(cWallet, account_path=f"m/44'/60'/0'/0/{i}")
-                    balance = web3.eth.get_balance(wallet_address.address)
-                    nonce = web3.eth.get_transaction_count(wallet_address.address)
-                    _wallets.append({'wallet': wallet_address, 'balance': balance, 'nonce': nonce})
+
+                    _wallets.append({'wallet': wallet_address})
 
     return _wallets

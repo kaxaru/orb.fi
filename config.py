@@ -1,14 +1,14 @@
 from web3 import Web3
 from loguru import logger
-import json
+from zksync_sdk import HttpJsonRPCTransport, ZkSyncProviderV01, network
 
-#ERC
-ERC20_ABI = json.loads('''[{"inputs":[{"internalType":"string","name":"_name","type":"string"},{"internalType":"string","name":"_symbol","type":"string"},{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"decimals_","type":"uint8"}],"name":"setupDecimals","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}]''')
 
-usdc_orbiter = '0x41d3D33156aE7c62c094AAe2995003aE63f587B3'
-usdt_orbiter = '0xd7Aa9ba6cAAC7b0436c91396f22ca5a7F31664fC'
-eth_orbiter = '0x80C67432656d59144cEFf962E8fAF8926599bCF8'
-dai_orbiter = '0x095D2918B03b2e86D68551DCF11302121fb626c9'
+contract_orbiter_router = {
+    'usdc': '0x41d3D33156aE7c62c094AAe2995003aE63f587B3',
+    'usdt': '0xd7Aa9ba6cAAC7b0436c91396f22ca5a7F31664fC',
+    'eth': '0x80C67432656d59144cEFf962E8fAF8926599bCF8',
+    'dai': '0x095D2918B03b2e86D68551DCF11302121fb626c9'
+}
 
 contract_stable = {
     'ethereum': {
@@ -38,88 +38,17 @@ contract_stable = {
             'usdt': '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
             'dai': '0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3'
         },
+    'nova': {
+            'usdc': '0x750ba8b76187092b0d1e87e28daaf484d1b5273b',
+            'usdt': '',
+            'dai': '',
+    }
 }
 
-sourthmap_currency = {
-    'usdc': {
-        'matic': {
-            'withholding_fee': 1.5,
-            'restricted': False,
-        },
-        'optimism': {
-            'withholding_fee': 1.8,
-            'restricted': False
-        },
-        'arbitrum': {
-            'withholding_fee': 1.8,
-            'restricted': False
-        },
-        'bsc': {
-            'withholding_fee': None,
-            'restricted': True
-        },
-    },
-    'usdt': {
-        'matic': {
-            'withholding_fee': 1.5,
-            'restricted': False
-        },
-        'optimism': {
-            'withholding_fee': 2,
-            'restricted': False
-        },
-        'arbitrum': {
-            'withholding_fee': 1.8,
-            'restricted': False
-        },
-        'bsc': {
-            'withholding_fee': None,
-            'restricted': True
-        },
-    },
-    'dai': {
-        'matic': {
-            'withholding_fee': 1.3,
-            'restricted': False
-        },
-        'optimism': {
-            'withholding_fee': 1.3,
-            'restricted': False
-        },
-        'arbitrum': {
-            'withholding_fee': 1.8,
-            'restricted': False
-        },
-        'bsc': {
-            'withholding_fee': None,
-            'restricted': True
-        },
-    },
-    'eth': {
-        'matic': {
-            'withholding_fee': 0.0006,
-            'restricted': False
-        },
-        'optimism': {
-            'withholding_fee': None,
-            'restricted': False
-        },
-        'arbitrum': {
-            'withholding_fee': None,
-            'restricted': False
-        },
-        'bsc': {
-            'withholding_fee': 0.0003,
-            'restricted': False
-        },
-    },
-}
-
-
-network_code = {
+orbiter_network_code = {
     'ethereum': 9001,
     'arbitrum': 9002,
-    'zkSync': 9003,
+    'zkSync lite': 9003,
     'starkNet': 9004,
     'matic': 9006,
     'optimism': 9007,
@@ -128,36 +57,43 @@ network_code = {
     'nova': 9016
 }
 
-
-
 providers = {
     'matic': {'chainId': 137,
               "rpc": 'https://rpc-mainnet.matic.quiknode.pro',
-              "name": 'matic'},
+              "name": 'matic',
+              "scanner": 'https://polygonscan.com/',
+              },
     'bsc': {'chainId': 56,
-            "rpc": 'https://bsc-dataseed.binance.org/',
-            "name": 'bsc'},
+                "rpc": 'https://bsc-dataseed.binance.org/',
+                "name": 'bsc',
+                "scanner": 'https://bscscan.com',
+            },
     'ethereum': {'chainId': 1,
-            "rpc": 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-            "name": 'ethereum'},
-    'fuji': {'chainId': 43113,
-             "rpc": 'https://api.avax-test.network/ext/bc/C/rpc',
-             "name": 'fuji'},
-    'mumbai': {'chainId': 80001,
-               "rpc": 'https://matic-mumbai.chainstacklabs.com',
-               "name": 'mumbai'},
-    'rinkeby': {'chainId': 4,
-                   "rpc": 'https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
-                   "name": 'rinkeby'},
+                "rpc": 'https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+                "name": 'ethereum',
+                "scanner": 'https://etherscan.io/',
+                 },
     'optimism': {'chainId': 10,
-            "rpc": 'https://mainnet.optimism.io',
-            "name": 'optimism'},
+                "rpc": 'https://mainnet.optimism.io',
+                "name": 'optimism',
+                "scanner": 'https://optimistic.etherscan.io/',
+                 },
     'arbitrum': {'chainId': 42161,
                 "rpc": 'https://arb1.arbitrum.io/rpc',
-                "name": 'arbitrum'},
+                "name": 'arbitrum',
+                "scanner": 'https://arbiscan.io/',
+
+                 },
     'nova': {'chainId': 42170,
-                    "rpc": 'https://nova.arbitrum.io/rpc',
-                    "name": 'nova'},
+                "rpc": 'https://nova.arbitrum.io/rpc',
+                "name": 'nova',
+                "scanner": 'https://nova.arbiscan.io/',
+             },
+    'zksync_lite': {'chainId': '',
+                "rpc": ZkSyncProviderV01(provider=HttpJsonRPCTransport(network=network.mainnet)),
+                "name": 'zkSync lite',
+                "scanner": 'https://zkscan.io/',
+             }
 }
 
 
@@ -179,308 +115,700 @@ def get_provider(chain):
         provider = {'provider': providers['optimism']}
     elif chain == 'Matic':
         provider = {'provider': providers['matic']}
+    elif chain == 'Nova':
+        provider = {'provider': providers['nova']}
+    elif chain == 'ZkSync lite':
+        provider = ZkSyncProviderV01(provider=HttpJsonRPCTransport(network=network.mainnet))
     else:
         logger.info(f'not found chain')
 
     return provider
 
-
-default_gasPrice = {
-    'arbitrum': {
-        'gasPrice':  Web3.toWei(0.0000000001, 'ether'),
-        'gasLimit': 3000000
-    },
-    'optimism': {
-        'gasPrice':  Web3.toWei(0.0000000001, 'ether'),
-        'gasLimit': 3000000
-    },
-    'matic': {
-        'gasPrice':  Web3.toWei('190', 'gwei'),
-        'gasLimit': 120000
-    },
-    'ethereum': {
-        'gasPrice':  Web3.toWei(20, 'gwei'),
-        'gasLimit': 3000000
-    },
-    'bsc': {
-        'gasPrice':  Web3.toWei('5', 'gwei'),
-        'gasLimit': 70000
-    }
-}
+MIN_VALUE_ASSETS = 0.1
 
 transfer_limit = {
     'ethereum': {
         'arbitrum': {
             'eth': {
                 'min': 0.005,
-                'max': 10
+                'max': 10,
+                'withholding_fee': 0.0012
             },
             'usdc': {
-                            'min': 0.005,
-                            'max': 10000
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+
                         },
             'usdt': {
-                            'min': 0.005,
+                            'min': MIN_VALUE_ASSETS,
                             'max': 10000
                         },
             'dai': {
-                            'min': 0.01,
+                            'min': MIN_VALUE_ASSETS,
                             'max': 3000
             },
         },
         'optimism': {
                     'eth': {
                         'min': 0.005,
-                        'max': 10
+                        'max': 10,
+                        'withholding_fee': 0.0012,
                     },
                     'usdc': {
-                                    'min': 0.005,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 10000
                                 },
                     'usdt': {
-                                    'min': 0.005,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 10000
                                 },
                     'dai': {
-                                    'min': 0.01,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 3000
                     },
         },
         'matic': {
                     'eth': {
                         'min': 0.005,
-                        'max': 10
+                        'max': 10,
+                        'withholding_fee': 0.0005
                     },
                     'usdc': {
-                                    'min': 0.005,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 10000
                                 },
                     'usdt': {
-                                    'min': 0.005,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 10000
                                 },
                     'dai': {
-                                    'min': 0.01,
+                                    'min': MIN_VALUE_ASSETS,
                                     'max': 3000
                     },
         },
         'bsc': {
                     'eth': {
                         'min': 0.005,
-                        'max': 10
+                        'max': 10,
+                        'withholding_fee': 0.0005
                     },
                 },
+        'nova': {
+                'eth': {
+                    'min': 0.005,
+                    'max': 5,
+                    'withholding_fee': 0.0005
+                },
+                'usdc': {
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 10000
+                        },
+        },
+        'zksync lite': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0013
+            },
+            'usdc': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+
+                        },
+            'usdt': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000
+                        },
+            'dai': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 3000
+            },
+        },
     },
     'arbitrum': {
             'matic': {
                 'eth': {
                     'min': 0.005,
-                    'max': 10
+                    'max': 10,
+                    'withholding_fee': 0.0006
                 },
                 'usdc': {
-                                'min': 0.005,
-                                'max': 10000
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 10000,
+                                'withholding_fee': 1.5
                             },
                 'usdt': {
-                                'min': 0.005,
-                                'max': 10000
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 10000,
+                                'withholding_fee': 1.5
                             },
                 'dai': {
-                                'min': 0.01,
-                                'max': 3000
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 3000,
+                                'withholding_fee': 1.5
                 },
             },
             'optimism': {
                             'eth': {
                                 'min': 0.005,
-                                'max': 10
+                                'max': 10,
+                                'withholding_fee': 0.0007
                             },
                             'usdc': {
-                                            'min': 0.005,
-                                            'max': 10000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 2
                                         },
                             'usdt': {
-                                            'min': 0.005,
-                                            'max': 10000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 2
                                         },
                             'dai': {
-                                            'min': 0.01,
-                                            'max': 3000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 3000,
+                                            'withholding_fee': 2
                             },
                         },
             'ethereum': {
                             'eth': {
                                 'min': 0.005,
-                                'max': 10
+                                'max': 10,
+                                'withholding_fee': 0.0062
                             },
                             'usdc': {
-                                            'min': 0.005,
-                                            'max': 10000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 12.8
                                         },
                             'usdt': {
-                                            'min': 0.005,
-                                            'max': 10000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 12.8
                                         },
                             'dai': {
-                                            'min': 0.01,
-                                            'max': 3000
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 3000,
+                                            'withholding_fee': 12.8
                             },
                         },
             'bsc': {
                             'eth': {
                                 'min': 0.005,
-                                'max': 10
+                                'max': 10,
+                                'withholding_fee': 0.0003
                             },
                    },
+            'nova': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 5,
+                        'withholding_fee': 0.0005
+                    },
+                    'usdc': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 5000,
+                                    'withholding_fee': 1.5
+                    },
+
+            },
+            'zksync lite': {
+                        'eth': {
+                            'min': 0.005,
+                            'max': 10,
+                            'withholding_fee': 0.0013
+                        },
+                        'usdc': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 2
+                                    },
+                        'usdt': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 2
+                                    },
+                        'dai': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 3000,
+                                        'withholding_fee': 2
+                        },
+            },
     },
     'optimism': {
                 'matic': {
                     'eth': {
                         'min': 0.005,
-                        'max': 10
+                        'max': 10,
+                        'withholding_fee': 0.0005
                     },
                     'usdc': {
-                                    'min': 0.005,
-                                    'max': 10000
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.5
                                 },
                     'usdt': {
-                                    'min': 0.005,
-                                    'max': 10000
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.5
                                 },
                     'dai': {
-                                    'min': 0.01,
-                                    'max': 3000
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 3000,
+                                    'withholding_fee': 1.5
                     },
                 },
                 'arbitrum': {
                                 'eth': {
                                     'min': 0.005,
-                                    'max': 10
+                                    'max': 10,
+                                    'withholding_fee': 0.0011
                                 },
                                 'usdc': {
-                                                'min': 0.005,
-                                                'max': 10000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 1.8
                                             },
                                 'usdt': {
-                                                'min': 0.005,
-                                                'max': 10000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 1.8
                                             },
                                 'dai': {
-                                                'min': 0.01,
-                                                'max': 3000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 3000,
+                                                'withholding_fee': 1.8
                                 },
                             },
                 'ethereum': {
                                 'eth': {
                                     'min': 0.005,
-                                    'max': 10
+                                    'max': 10,
+                                    'withholding_fee': 0.0062
                                 },
                                 'usdc': {
-                                                'min': 0.005,
-                                                'max': 10000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 12.8
                                             },
                                 'usdt': {
-                                                'min': 0.005,
-                                                'max': 10000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 12.8
                                             },
                                 'dai': {
-                                                'min': 0.01,
-                                                'max': 3000
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 3000,
+                                                'withholding_fee': 12.8
                                 },
                             },
                 'bsc': {
                                 'eth': {
                                     'min': 0.005,
-                                    'max': 10
+                                    'max': 10,
+                                    'withholding_fee': 0.0003
                                 },
                        },
-        },
+                'nova': {
+                                    'eth': {
+                                        'min': 0.005,
+                                        'max': 5,
+                                        'withholding_fee': 0.0005
+                                    },
+                                    'usdc': {
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 5000,
+                                                    'withholding_fee': 1
+                                            },
+
+                 },
+                'zksync lite': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0013
+                            },
+                            'usdc': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 1.5
+                                        },
+                            'usdt': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 1.5
+                                        },
+                            'dai': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 3000,
+                                            'withholding_fee': 1.5
+                            },
+                },
+    },
     'matic': {
                     'optimism': {
                         'eth': {
                             'min': 0.005,
-                            'max': 10
+                            'max': 10,
+                            'withholding_fee': 0.0008
                         },
                         'usdc': {
-                                        'min': 0.005,
-                                        'max': 10000
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 2
                                     },
                         'usdt': {
-                                        'min': 0.005,
-                                        'max': 10000
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 2
                                     },
                         'dai': {
-                                        'min': 0.01,
-                                        'max': 3000
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 3000,
+                                        'withholding_fee': 2
                         },
                     },
                     'arbitrum': {
                                     'eth': {
                                         'min': 0.005,
-                                        'max': 10
+                                        'max': 10,
+                                        'withholding_fee': 0.0011
                                     },
                                     'usdc': {
-                                                    'min': 0.005,
-                                                    'max': 10000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 10000,
+                                                    'withholding_fee': 2.5
                                                 },
                                     'usdt': {
-                                                    'min': 0.005,
-                                                    'max': 10000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 10000,
+                                                    'withholding_fee': 2.5
                                                 },
                                     'dai': {
-                                                    'min': 0.01,
-                                                    'max': 3000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 3000,
+                                                    'withholding_fee': 2.5
                                     },
                                 },
                     'ethereum': {
                                     'eth': {
                                         'min': 0.005,
-                                        'max': 10
+                                        'max': 10,
+                                        'withholding_fee': 0.0062
                                     },
                                     'usdc': {
-                                                    'min': 0.005,
-                                                    'max': 10000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 10000,
+                                                    'withholding_fee': 12.8
                                                 },
                                     'usdt': {
-                                                    'min': 0.005,
-                                                    'max': 10000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 10000,
+                                                    'withholding_fee': 12.8
                                                 },
                                     'dai': {
-                                                    'min': 0.01,
-                                                    'max': 3000
+                                                    'min': MIN_VALUE_ASSETS,
+                                                    'max': 3000,
+                                                    'withholding_fee': 12.8
                                     },
                                 },
                     'bsc': {
                                     'eth': {
                                         'min': 0.005,
-                                        'max': 10
+                                        'max': 10,
+                                        'withholding_fee': 0.0003
                                     },
                            },
+                    'nova': {
+                                        'eth': {
+                                            'min': 0.005,
+                                            'max': 5,
+                                            'withholding_fee': 0.0005
+                                        },
+                                        'usdc': {
+                                                        'min': MIN_VALUE_ASSETS,
+                                                        'max': 10000,
+                                                        'withholding_fee': 2
+                                                },
+
+                            },
+                    'zksync lite': {
+                                'eth': {
+                                    'min': 0.005,
+                                    'max': 10,
+                                    'withholding_fee': 0.0013
+                                },
+                                'usdc': {
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 2
+
+                                            },
+                                'usdt': {
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 10000,
+                                                'withholding_fee': 2
+                                            },
+                                'dai': {
+                                                'min': MIN_VALUE_ASSETS,
+                                                'max': 3000,
+                                                'withholding_fee': 2
+                                },
             },
+    },
     'bsc': {
                         'optimism': {
                             'eth': {
                                 'min': 0.005,
-                                'max': 10
+                                'max': 10,
+                                'withholding_fee': 0.0008
                             },
                         },
                         'arbitrum': {
                                         'eth': {
                                             'min': 0.005,
-                                            'max': 10
+                                            'max': 10,
+                                            'withholding_fee': 0.0008
                                         }
                                     },
                         'ethereum': {
                                         'eth': {
                                             'min': 0.005,
-                                            'max': 10
+                                            'max': 10,
+                                            'withholding_fee': 0.0062
                                         }
                                     },
                         'matic': {
                                         'eth': {
                                             'min': 0.005,
-                                            'max': 10
+                                            'max': 10,
+                                            'withholding_fee': 0.0003
                                         },
                                },
+                        'nova': {
+                                            'eth': {
+                                                'min': 0.005,
+                                                'max': 5,
+                                                'withholding_fee': 0.0005
+                                            },
+                                },
+                        'zksync lite': {
+                                            'eth': {
+                                                'min': 0.005,
+                                                'max': 5,
+                                                'withholding_fee': 0.0013
+                                            },
+                                },
+
+    },
+    'nova': {
+            'optimism': {
+                        'eth': {
+                            'min': 0.005,
+                            'max': 10,
+                            'withholding_fee': 0.0005
+                        },
+                        'usdc': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 1
+                                    },
+                        'usdt': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 1
+                                    },
+                        'dai': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 3000,
+                                        'withholding_fee': 1
+                        },
+            },
+            'arbitrum': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0006
+                            },
+                            'usdc': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 1
+                                        },
+                            'usdt': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 1
+                                        },
+                            'dai': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 3000,
+                                            'withholding_fee': 1
+                            },
+                        },
+            'polygon': {
+                        'eth': {
+                            'min': 0.005,
+                            'max': 10,
+                            'withholding_fee': 0.0005
+                        },
+                        'usdc': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 1
+                                    },
+                        'usdt': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 10000,
+                                        'withholding_fee': 1
+                                    },
+                        'dai': {
+                                        'min': MIN_VALUE_ASSETS,
+                                        'max': 3000,
+                                        'withholding_fee': 1
+                        },
+            },
+            'ethereum': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0062
+                            },
+                            'usdc': {
+                                            'min': MIN_VALUE_ASSETS,
+                                            'max': 10000,
+                                            'withholding_fee': 12.8
+                                        },
+
+                        },
+            'bsc': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0005
+                            },
+                   },
+            'zksync lite': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0005
+                            },
+                            'usdc': {
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 10,
+                                'withholding_fee': 1
+                            },
+            }
+    },
+    'zksync_lite': {
+        'arbitrum': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0011
+            },
+            'usdc': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+                            'withholding_fee': 3
+                        },
+            'usdt': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+                            'withholding_fee': 3
+                        },
+            'dai': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 3000,
+                            'withholding_fee': 3
+            },
+        },
+        'optimism': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10,
+                        'withholding_fee': 0.0008,
+                    },
+                    'usdc': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.8,
+                                },
+                    'usdt': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.8,
+                                },
+                    'dai': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 3000,
+                                    'withholding_fee': 1.8,
+                    },
+        },
+        'matic': {
+                    'eth': {
+                        'min': 0.007,
+                        'max': 10,
+                        'withholding_fee': 0.0005
+                    },
+                    'usdc': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.5
+                                },
+                    'usdt': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 10000,
+                                    'withholding_fee': 1.5
+                                },
+                    'dai': {
+                                    'min': MIN_VALUE_ASSETS,
+                                    'max': 3000,
+                                    'withholding_fee': 1.5
+                    },
+        },
+        'bsc': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10,
+                        'withholding_fee': 0.0005
+                    },
                 },
+        'nova': {
+                'eth': {
+                    'min': 0.005,
+                    'max': 5,
+                    'withholding_fee': 0.0005
+                },
+                'usdc': {
+                                'min': MIN_VALUE_ASSETS,
+                                'max': 10000,
+                                'withholding_fee': 1
+                        },
+        },
+        'ethereum': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0062
+            },
+            'usdc': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+                            'withholding_fee': 12.8
+
+                        },
+            'usdt': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 10000,
+                            'withholding_fee': 12.8
+                        },
+            'dai': {
+                            'min': MIN_VALUE_ASSETS,
+                            'max': 3000,
+                            'withholding_fee': 12.8
+            },
+        },
+    }
 }
