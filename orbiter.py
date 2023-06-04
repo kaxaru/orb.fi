@@ -7,7 +7,7 @@ from get_wallet import get_main_wallet, get_all_wallets
 from config import contract_stable
 from config import orbiter_network_code
 from config import contract_orbiter_router
-from config import get_current_provider
+from config import get_current_provider, providers
 from config import transfer_limit
 from helper import load_contract
 from multiprocessing.dummy import Pool
@@ -16,8 +16,9 @@ from decimal import Decimal
 
 from zksync_sdk import network, ZkSync, EthereumProvider, Wallet, ZkSyncSigner, EthereumSignerWeb3, ZkSyncLibrary
 from zksync_sdk.types import ChangePubKeyEcdsa
+import os
 
-
+logger.info(os.environ["ZK_SYNC_LIBRARY_PATH"])
 lib = ZkSyncLibrary()
 
 class Chain(Enum):
@@ -29,9 +30,11 @@ class Chain(Enum):
     nova = 'Nova',
     starknet = 'Starknet',
     zksync_lite = 'Zksync lite',
-    zksync_era = 'Zksync era'
+    zksync_era = 'Zksync era',
+    fantom = 'fantom'
 
 chain_with_native_eth = [Chain.ethereum.name, Chain.arbitrum.name, Chain.optimism.name, Chain.zksync_lite.name, Chain.nova.name, Chain.zksync_era.name]
+chain_without_eipstandart = [Chain.bsc.name, Chain.optimism.name, Chain.fantom.name]
 
 def get_balance(chain, type_currency, contract_stable_instance = None, web3 = None):
     if type_currency != 'eth':
@@ -107,7 +110,6 @@ def bridge(user_info):
     else:
         web3 = Web3(Web3.HTTPProvider(provider_info['rpc']))
 
-
     if type_currency != 'eth':
         contract_stable_address = contract_stable[user_info['chain_current']][user_info['type_currency']]
         contract_stable_instance = load_contract(web3, 'erc20', Web3.toChecksumAddress(contract_stable_address))
@@ -138,21 +140,30 @@ def bridge(user_info):
                         "chainId": web3.eth.chain_id,
                         'to': address_to,
                         'value': amount,
-                        'gas': 0,
-                        'gasPrice': web3.eth.gasPrice,
                         'nonce': nonce,
                     }
+                    if not (user_info['chain_current'] in chain_without_eipstandart):
+                        contract_txn.update({'maxFeePerGas': web3.eth.gasPrice})
+                        contract_txn.update({'maxPriorityFeePerGas': web3.eth.gasPrice})
+                    else:
+                        contract_txn.update({'gasPrice': web3.eth.gasPrice})
+
+                    if web3.eth.chain_id == providers['zksync_era']['chainId']:
+                        contract_txn.update({'from': wallet["wallet"].address})
+
                 else:
                     contract_txn = contract_stable_instance.functions.transfer(Web3.toChecksumAddress(address_to),
                                                                                amount).buildTransaction({
                         'chainId': web3.eth.chain_id,
                         'from': wallet['wallet'].address,
-                        'gas': 0,
-                        'maxFeePerGas': web3.eth.gasPrice,
-                        'maxPriorityFeePerGas': web3.eth.gasPrice,
-                        'gasPrice': web3.eth.gasPrice,
                         'nonce': nonce,
                     })
+                    if not (user_info['chain_current'] in chain_without_eipstandart):
+                        contract_txn.update({'maxFeePerGas': web3.eth.gasPrice})
+                        contract_txn.update({'maxPriorityFeePerGas': web3.eth.gasPrice})
+                    else:
+                        contract_txn.update({'gasPrice': web3.eth.gasPrice})
+
                 try:
                     gasLimit = web3.eth.estimateGas(contract_txn)
                     contract_txn.update({'gas': gasLimit})
@@ -162,10 +173,14 @@ def bridge(user_info):
                 contract_txn = contract_stable_instance.functions.transfer(Web3.toChecksumAddress(address_to), amount).buildTransaction({
                         'chainId': web3.eth.chain_id,
                         'from': wallet['wallet'].address,
-                        'gas': 0,
-                        'gasPrice': web3.eth.gasPrice,
                         'nonce': nonce,
                     })
+                if not (user_info['chain_current'] in chain_without_eipstandart):
+                    contract_txn.update({'maxFeePerGas': web3.eth.gasPrice})
+                    contract_txn.update({'maxPriorityFeePerGas': web3.eth.gasPrice})
+                else:
+                    contract_txn.update({'gasPrice': web3.eth.gasPrice})
+
                 gasLimit = web3.eth.estimateGas(contract_txn)
                 contract_txn.update({'gas': gasLimit})
 
@@ -181,8 +196,8 @@ def bridge(user_info):
 
 if __name__ == '__main__':
     wallets = get_all_wallets(get_main_wallet())
-    chain_from = str(input('Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite \n')).lower()
-    chain_to = str(input('Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite \n')).lower()
+    chain_from = str(input('Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
+    chain_to = str(input('Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
     chain_from = '_'.join(chain_from.split(' '))
     chain_to = '_'.join(chain_to.split(' '))
     trx_count = int(input('Number of transaction'))
@@ -197,9 +212,9 @@ if __name__ == '__main__':
        except Exception as e:
            logger.info(e)
            chain_from = str(input(
-               'Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova \n')).lower()
+               'Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
            chain_to = str(input(
-               'Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova \n')).lower()
+               'Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
 
     is_possible_transfer = False
     while not is_possible_transfer:
@@ -242,7 +257,7 @@ if __name__ == '__main__':
 
     for wallet in wallets:
         user_info = {
-            'amount': amount,
+            'amount': amount + round(random.uniform(0.0001, 0.0002), 5),
             'type_currency': type_currency,
             'trx_count': trx_count,
             'chain_current': chain_from,

@@ -42,13 +42,24 @@ contract_stable = {
             'usdc': '0x750ba8b76187092b0d1e87e28daaf484d1b5273b',
             'usdt': '',
             'dai': '',
+    },
+    'avaxc': {
+            'usdc': '',
+            'usdt': '',
+            'dai': '',
+    },
+    'zksync_era': {
+            'usdc': '',
+            'usdt': '',
+            'dai': '',
     }
 }
 
 orbiter_network_code = {
     'ethereum': 9001,
     'arbitrum': 9002,
-    'zkSync lite': 9003,
+    'zksync_lite': 9003,
+    'zksync_era': 9014,
     'starkNet': 9004,
     'matic': 9006,
     'optimism': 9007,
@@ -93,6 +104,11 @@ providers = {
                 "rpc": ZkSyncProviderV01(provider=HttpJsonRPCTransport(network=network.mainnet)),
                 "name": 'zkSync lite',
                 "scanner": 'https://zkscan.io/',
+             },
+    'zksync_era': {'chainId': 324,
+                "rpc": 'https://mainnet.era.zksync.io',
+                "name": 'zkSync era',
+                "scanner": 'https://explorer.zksync.io/',
              }
 }
 
@@ -117,6 +133,8 @@ def get_provider(chain):
         provider = {'provider': providers['matic']}
     elif chain == 'Nova':
         provider = {'provider': providers['nova']}
+    elif chain == 'Zksync era':
+        provider = {'provider': providers['zksync_era']}
     elif chain == 'ZkSync lite':
         provider = ZkSyncProviderV01(provider=HttpJsonRPCTransport(network=network.mainnet))
     else:
@@ -204,7 +222,7 @@ transfer_limit = {
                                 'max': 10000
                         },
         },
-        'zksync lite': {
+        'zksync_lite': {
             'eth': {
                 'min': 0.005,
                 'max': 10,
@@ -223,6 +241,13 @@ transfer_limit = {
                             'min': MIN_VALUE_ASSETS,
                             'max': 3000
             },
+        },
+        'zksync_era': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0022
+            }
         },
     },
     'arbitrum': {
@@ -312,7 +337,7 @@ transfer_limit = {
                     },
 
             },
-            'zksync lite': {
+            'zksync_lite': {
                         'eth': {
                             'min': 0.005,
                             'max': 10,
@@ -333,6 +358,13 @@ transfer_limit = {
                                         'max': 3000,
                                         'withholding_fee': 2
                         },
+            },
+            'zksync_era': {
+                        'eth': {
+                            'min': 0.005,
+                            'max': 10,
+                            'withholding_fee': 0.0016
+                        }
             },
     },
     'optimism': {
@@ -422,7 +454,7 @@ transfer_limit = {
                                             },
 
                  },
-                'zksync lite': {
+                'zksync_lite': {
                             'eth': {
                                 'min': 0.005,
                                 'max': 10,
@@ -443,6 +475,13 @@ transfer_limit = {
                                             'max': 3000,
                                             'withholding_fee': 1.5
                             },
+                },
+                'zksync_era': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0016
+                            }
                 },
     },
     'matic': {
@@ -532,7 +571,7 @@ transfer_limit = {
                                                 },
 
                             },
-                    'zksync lite': {
+                    'zksync_lite': {
                                 'eth': {
                                     'min': 0.005,
                                     'max': 10,
@@ -554,7 +593,14 @@ transfer_limit = {
                                                 'max': 3000,
                                                 'withholding_fee': 2
                                 },
-            },
+                    },
+                    'zksync_era': {
+                                'eth': {
+                                    'min': 0.005,
+                                    'max': 10,
+                                    'withholding_fee': 0.0016
+                                }
+                    },
     },
     'bsc': {
                         'optimism': {
@@ -592,14 +638,20 @@ transfer_limit = {
                                                 'withholding_fee': 0.0005
                                             },
                                 },
-                        'zksync lite': {
+                        'zksync_lite': {
                                             'eth': {
                                                 'min': 0.005,
                                                 'max': 5,
                                                 'withholding_fee': 0.0013
                                             },
-                                },
-
+                        },
+                        'zksync_era': {
+                                            'eth': {
+                                                'min': 0.005,
+                                                'max': 5,
+                                                'withholding_fee': 0.0016
+                                            },
+                        },
     },
     'nova': {
             'optimism': {
@@ -688,7 +740,7 @@ transfer_limit = {
                                 'withholding_fee': 0.0005
                             },
                    },
-            'zksync lite': {
+            'zksync_lite': {
                             'eth': {
                                 'min': 0.005,
                                 'max': 10,
@@ -698,6 +750,13 @@ transfer_limit = {
                                 'min': MIN_VALUE_ASSETS,
                                 'max': 10,
                                 'withholding_fee': 1
+                            },
+            },
+            'zksync_era': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0005
                             },
             }
     },
@@ -810,5 +869,63 @@ transfer_limit = {
                             'withholding_fee': 12.8
             },
         },
+        'zksync_era': {
+                            'eth': {
+                                'min': 0.005,
+                                'max': 10,
+                                'withholding_fee': 0.0018
+                            },
+        }
+    },
+    'zksync_era': {
+        'arbitrum': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0013
+            },
+        },
+        'optimism': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10,
+                        'withholding_fee': 0.0017,
+                    },
+        },
+        'matic': {
+                    'eth': {
+                        'min': 0.007,
+                        'max': 10,
+                        'withholding_fee': 0.0009
+                    },
+        },
+        'bsc': {
+                    'eth': {
+                        'min': 0.005,
+                        'max': 10,
+                        'withholding_fee': 0.0013
+                    },
+                },
+        'nova': {
+                'eth': {
+                    'min': 0.005,
+                    'max': 5,
+                    'withholding_fee': 0.0008
+                },
+        },
+        'ethereum': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0062
+            }
+        },
+        'zksync_lite': {
+            'eth': {
+                'min': 0.005,
+                'max': 10,
+                'withholding_fee': 0.0012
+            }
+        }
     }
 }

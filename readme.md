@@ -1,6 +1,6 @@
 # Orbiter finance
 
-Avalaible chains: Ethereum, Arbitrum, Optimism, Nova, Zksync lite, Matic BSC
+Avalaible chains: Ethereum, Arbitrum, Optimism, Nova, Zksync Lite, Zksync Era, Matic, BSC
 
 In order to work with the zksync you need:
 
