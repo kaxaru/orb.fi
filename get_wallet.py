@@ -7,6 +7,11 @@ def get_main_wallet():
         _main_wallet = [row.strip() for row in file]
     return _main_wallet
 
+def get_addresses():
+    with open(f'{os.path.dirname(__file__)}/wallets/addresses.txt', 'r') as file:
+        _addresses = [row.strip() for row in file]
+    return _addresses
+
 def get_all_wallets(list):
     default_provider = get_default_provider()
     web3 = Web3(Web3.HTTPProvider(default_provider['provider']['rpc']))

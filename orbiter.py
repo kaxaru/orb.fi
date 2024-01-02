@@ -8,11 +8,11 @@ from config import contract_stable
 from config import orbiter_network_code
 from config import contract_orbiter_router
 from config import get_current_provider, providers
-from config import transfer_limit
-from helper import load_contract
+from help import load_contract
 from multiprocessing.dummy import Pool
 import asyncio
 from decimal import Decimal
+import json
 
 from zksync_sdk import network, ZkSync, EthereumProvider, Wallet, ZkSyncSigner, EthereumSignerWeb3, ZkSyncLibrary
 from zksync_sdk.types import ChangePubKeyEcdsa
@@ -28,13 +28,30 @@ class Chain(Enum):
     matic = 'Matic',
     bsc = 'Bsc',
     nova = 'Nova',
-    starknet = 'Starknet',
+    #starknet = 'Starknet',
     zksync_lite = 'Zksync lite',
     zksync_era = 'Zksync era',
-    fantom = 'fantom'
+    #fantom = 'fantom'
+    base = 'base'
+    linea = 'linea'
+    zkfair = 'zkfair'
+    zkevm = 'zkevm'
+    manta = 'manta'
+    mantle = 'mantle'
+    scroll = 'scroll'
+    zora = 'zora'
+    opbnb = 'opbnb'
+    imx = 'immutable'
 
-chain_with_native_eth = [Chain.ethereum.name, Chain.arbitrum.name, Chain.optimism.name, Chain.zksync_lite.name, Chain.nova.name, Chain.zksync_era.name]
-chain_without_eipstandart = [Chain.bsc.name, Chain.optimism.name, Chain.fantom.name]
+chain_with_native_eth = [Chain.ethereum.name, Chain.arbitrum.name, Chain.optimism.name, Chain.zksync_lite.name, Chain.nova.name, Chain.zksync_era.name, Chain.base.name, Chain.zora.name, Chain.manta.name, Chain.scroll.name, Chain.imx.name, Chain.zkevm.name]
+chain_without_eipstandart = [Chain.bsc.name, Chain.optimism.name, Chain.mantle, Chain.opbnb]
+
+def get_maker():
+    path = f"{os.path.dirname(os.path.abspath(__file__))}/makers/"
+    with open(os.path.abspath(path + f"maker.json")) as f:
+        maker: str = json.load(f)
+    return maker
+
 
 def get_balance(chain, type_currency, contract_stable_instance = None, web3 = None):
     if type_currency != 'eth':
@@ -121,7 +138,7 @@ def bridge(user_info):
 
         address_to = Web3.toChecksumAddress(contract_orbiter_router[type_currency])
     else:
-        if user_info['chain_current'] == 'bsc' or user_info['chain_current'] == 'matic':
+        if not user_info['chain_current'] in chain_with_native_eth:
             contract_stable_address = contract_stable[user_info['chain_current']][user_info['type_currency']]
             contract_stable_instance = load_contract(web3, 'erc20', Web3.toChecksumAddress(contract_stable_address))
         else:
@@ -159,8 +176,9 @@ def bridge(user_info):
                         'nonce': nonce,
                     })
                     if not (user_info['chain_current'] in chain_without_eipstandart):
-                        contract_txn.update({'maxFeePerGas': web3.eth.gasPrice})
-                        contract_txn.update({'maxPriorityFeePerGas': web3.eth.gasPrice})
+                        gasPrice = web3.eth.gasPrice
+                        contract_txn.update({'maxFeePerGas': gasPrice})
+                        contract_txn.update({'maxPriorityFeePerGas': gasPrice})
                     else:
                         contract_txn.update({'gasPrice': web3.eth.gasPrice})
 
@@ -170,16 +188,27 @@ def bridge(user_info):
                 except Exception as e:
                     logger.info('impossible calculate to chain')
             else:
-                contract_txn = contract_stable_instance.functions.transfer(Web3.toChecksumAddress(address_to), amount).buildTransaction({
+                if user_info['max_eth_in_first_tx']:
+                    amount_on_wallet = contract_stable_instance.functions.balanceOf(wallet['wallet'].address).call()
+                    amount = amount_on_wallet // 10000 * 10000 + code
+                    if amount > amount_on_wallet:
+                        delta = random.randint(10000000, 90000000) // 10000 * 10000
+                        amount -= delta
+                        amount = amount // 10000 * 10000 + code
+
+                tx = {
                         'chainId': web3.eth.chain_id,
                         'from': wallet['wallet'].address,
-                        'nonce': nonce,
-                    })
+                        'nonce': nonce
+                    }
                 if not (user_info['chain_current'] in chain_without_eipstandart):
-                    contract_txn.update({'maxFeePerGas': web3.eth.gasPrice})
-                    contract_txn.update({'maxPriorityFeePerGas': web3.eth.gasPrice})
+                    gasPrice = web3.eth.gasPrice
+                    tx['maxFeePerGas'] = gasPrice
+                    tx['maxPriorityFeePerGas'] = gasPrice
                 else:
-                    contract_txn.update({'gasPrice': web3.eth.gasPrice})
+                    tx['gasPrice'] = web3.eth.gasPrice
+
+                contract_txn = contract_stable_instance.functions.transfer(Web3.toChecksumAddress(address_to), amount).buildTransaction(tx)
 
                 gasLimit = web3.eth.estimateGas(contract_txn)
                 contract_txn.update({'gas': gasLimit})
@@ -189,15 +218,22 @@ def bridge(user_info):
             logger.info(f'\n>>> bridge | {provider_info["scanner"]}/tx/{web3.toHex(tx_token)}')
 
             time.sleep(random.randint(5, 10))
+            if user_info['max_eth_in_first_tx']:
+                break
         else:
-            logger.info(f'wallet balance less than amount - {amount}, cur balance - {balance}')
+            logger.info(f'wallet {wallet["wallet"].address} balance less than amount - {amount}, cur balance - {balance}')
             break
         nonce = nonce + 1
 
 if __name__ == '__main__':
     wallets = get_all_wallets(get_main_wallet())
-    chain_from = str(input('Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
-    chain_to = str(input('Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
+    logger.info('list avalaible chains:')
+    avalaible_ch = []
+    for ch in Chain:
+        avalaible_ch.append(ch.name)
+    logger.info(avalaible_ch)
+    chain_from = str(input('Specify the network with which you want to bridge:  \n')).lower()
+    chain_to = str(input('Specify the network where we are going to bridge:  \n')).lower()
     chain_from = '_'.join(chain_from.split(' '))
     chain_to = '_'.join(chain_to.split(' '))
     trx_count = int(input('Number of transaction'))
@@ -211,38 +247,58 @@ if __name__ == '__main__':
                is_correct_chain = True
        except Exception as e:
            logger.info(e)
+           logger.info(avalaible_ch)
            chain_from = str(input(
-               'Specify the network with which you want to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
+               'Specify the network with which you want to bridge:  \n')).lower()
            chain_to = str(input(
-               'Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova, Zksync lite, Zksync era \n')).lower()
+               'Specify the network where we are going to bridge:  \n')).lower()
+
+    maker = get_maker()
+    ch_internal_to = orbiter_network_code[chain_to] % 100
+    ch_internal_from = orbiter_network_code[chain_from] % 100
+
+    _path = f'{orbiter_network_code[chain_from] % 100}-{orbiter_network_code[chain_to] % 100}'
 
     is_possible_transfer = False
     while not is_possible_transfer:
         try:
-            fee = transfer_limit[chain_from][chain_to][type_currency]['withholding_fee']
-            is_possible_transfer = True
+            if _path in maker:
+                routes = maker[_path]
+                path_cur = f"{type_currency.upper()}-{type_currency.upper()}"
+                if path_cur in routes:
+                    r_cur = routes[path_cur]
+                    fee = r_cur['tradingFee']
+                    is_possible_transfer = True
+                else:
+                    raise Exception
+            else:
+                raise Exception
+
         except Exception as e:
             logger.info('currency not avalaible in destination chain')
             logger.info(e)
             with open(f'helper.txt', 'r', encoding='utf-8') as file:
                 for row in file:
                     logger.info(row)
-            chain_to = str(input('Specify the network where we are going to bridge: Ethereum, Arbitrum, Optimism, Matic, BSC, Nova \n')).lower()
+
+            logger.info(avalaible_ch)
+            chain_to = str(input('Specify the network where we are going to bridge: \n')).lower()
             type_currency = str(input('eth, usdt , usdc, dai')).lower()
 
     amount = float(input('how much amount transfer to bridge?'))
     amount_check = False
     while not amount_check:
-        cur_limit = transfer_limit[chain_from][chain_to][type_currency]
-        if amount <= cur_limit['max'] and amount >= cur_limit['min']:
-            if amount >= cur_limit['min'] and amount <= cur_limit['min'] + transfer_limit[chain_from][chain_to][type_currency]['withholding_fee']:
-                amount = amount + transfer_limit[chain_from][chain_to][type_currency]['withholding_fee']
+        cur_limit = maker[_path][f"{type_currency.upper()}-{type_currency.upper()}"]
+
+        if amount <= cur_limit['maxPrice'] and amount >= cur_limit['minPrice']:
+            if amount >= cur_limit['minPrice'] and amount <= cur_limit['minPrice'] + cur_limit['tradingFee']:
+                amount = amount + cur_limit['tradingFee']
                 amount = round(amount, 4)
-            if (amount + transfer_limit[chain_from][chain_to][type_currency]['withholding_fee']) >= cur_limit['max']:
-                amount = amount - transfer_limit[chain_from][chain_to][type_currency]['withholding_fee']
+            if (amount + cur_limit['tradingFee']) >= cur_limit['maxPrice']:
+                amount = amount - cur_limit['tradingFee']
             amount_check = True
         else:
-            logger.info(f'transfer limit out of range, minimum - {cur_limit["min"]} and max - {cur_limit["max"]}')
+            logger.info(f'transfer limit out of range, minimum - {cur_limit["minPrice"]} and max - {cur_limit["maxPrice"]}')
             amount = float(input('how much amount transfer to bridge?'))
     logger.info(f'c - min amount {amount} for tx in {type_currency}')
 
@@ -257,12 +313,13 @@ if __name__ == '__main__':
 
     for wallet in wallets:
         user_info = {
-            'amount': amount + round(random.uniform(0.0001, 0.0002), 5),
+            'amount': amount + round(random.uniform(0.0001, 0.0005), 5),
             'type_currency': type_currency,
             'trx_count': trx_count,
             'chain_current': chain_from,
             'code': chain_to,
             'wallet': wallet,
+            'max_eth_in_first_tx': True
         }
 
         collections_user_info.append(user_info)
